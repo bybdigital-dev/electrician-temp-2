@@ -1,0 +1,41 @@
+name: Deploy static site to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]   # ← change if your default branch isn't 'main'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Create a unique build version, e.g., 20250909-131500-abc1234
+      - name: Set build version
+        run: echo "BUILD_VERSION=$(date +%Y%m%d-%H%M%S)-${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      # Replace the token in HTML and CSS (add other extensions if needed)
+      - name: Inject version into asset URLs
+        run: |
+          set -e
+          # Replace in .html and .css files
+          find . -type f \( -name "*.html" -o -name "*.css" \) -print0 \
+            | xargs -0 sed -i "s/__BUILD_VERSION__/${BUILD_VERSION}/g"
+
+      # (Optional) If you generate files, do it here before upload.
+      # - name: Build
+      #   run: your-build-command
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./
+
+      - name: Deploy to Pages
+        uses: actions/deploy-pages@v4
