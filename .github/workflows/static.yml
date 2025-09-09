@@ -31,13 +31,33 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
+
+      # NEW: create a unique build version like 20250909-132045-abc1234
+      - name: Set build version
+        run: echo "BUILD_VERSION=$(date +%Y%m%d-%H%M%S)-${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      # NEW: replace placeholder tokens in .html and .css, and write version.json
+      - name: Inject build version into asset URLs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Replace __BUILD_VERSION__ in HTML and CSS files
+          find . -type f \( -name "*.html" -o -name "*.css" \) -print0 \
+            | xargs -0 sed -i "s/__BUILD_VERSION__/${BUILD_VERSION}/g"
+
+          # Optional: version file for auto-reload scripts
+          echo "{\"version\":\"${BUILD_VERSION}\"}" > version.json
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
-          path: '.'
+          # Upload entire repository (post-replacement)
+          path: './'
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
